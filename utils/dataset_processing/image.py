@@ -172,24 +172,44 @@ class DepthImage(Image):
     def from_tiff(cls, fname):
         return cls(imread(fname))
 
+    # def inpaint(self, missing_value=0):
+    #     """
+    #     Inpaint missing values in depth image.
+    #     :param missing_value: Value to fill in teh depth image.
+    #     """
+    #     # cv2 inpainting doesn't handle the border properly
+    #     # https://stackoverflow.com/questions/25974033/inpainting-depth-map-still-a-black-image-border
+    #     self.img = cv2.copyMakeBorder(self.img, 1, 1, 1, 1, cv2.BORDER_DEFAULT)
+    #     mask = (self.img == missing_value).astype(np.uint8)
+
+    #     # Scale to keep as float, but has to be in bounds -1:1 to keep opencv happy.
+    #     scale = np.abs(self.img).max()
+    #     self.img = self.img.astype(np.float32) / scale  # Has to be float32, 64 not supported.
+    #     self.img = cv2.inpaint(self.img, mask, 1, cv2.INPAINT_NS)
+
+    #     # Back to original size and value range.
+    #     self.img = self.img[1:-1, 1:-1]
+    #     self.img = self.img * scale
+        
     def inpaint(self, missing_value=0):
         """
         Inpaint missing values in depth image.
-        :param missing_value: Value to fill in teh depth image.
+        :param missing_value: Value to fill in the depth image.
         """
-        # cv2 inpainting doesn't handle the border properly
-        # https://stackoverflow.com/questions/25974033/inpainting-depth-map-still-a-black-image-border
         self.img = cv2.copyMakeBorder(self.img, 1, 1, 1, 1, cv2.BORDER_DEFAULT)
-        mask = (self.img == missing_value).astype(np.uint8)
-
-        # Scale to keep as float, but has to be in bounds -1:1 to keep opencv happy.
+        mask = (self.img == missing_value).astype(np.uint8) * 255
         scale = np.abs(self.img).max()
-        self.img = self.img.astype(np.float32) / scale  # Has to be float32, 64 not supported.
-        self.img = cv2.inpaint(self.img, mask, 1, cv2.INPAINT_NS)
 
-        # Back to original size and value range.
-        self.img = self.img[1:-1, 1:-1]
+        if scale == 0:
+            scale = 1e-5  
+            
+        img_ready = (self.img / scale).astype(np.float32)
+        
+        inpainted = cv2.inpaint(img_ready, mask, 1, cv2.INPAINT_NS)
+        
+        self.img = inpainted[1:-1, 1:-1]
         self.img = self.img * scale
+
 
     def gradients(self):
         """

@@ -112,3 +112,6 @@ saved_data/
 *.pth
 *.pt
 *.safetensors
+*.pth
+.venv_robotics/
+archive/
